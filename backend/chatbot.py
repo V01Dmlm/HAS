@@ -3,31 +3,29 @@ import logging
 import os
 import torch
 from ctransformers import AutoModelForCausalLM
+from typing import List
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ChatBot")
 
+
 class ChatBot:
+    """
+    PDF-RAG-focused assistant:
+    - Answers using only PDF context.
+    - Falls back to generic model knowledge only for vague/general queries.
+    """
     def __init__(self, model_path: str = None, model_name: str = None,
                  max_threads: int = 4, use_cuda: bool = True, summarizer=None):
-        """
-        Robust Mistral/GPT-NeoX wrapper for production.
-        You can pass either:
-          - model_path="full/path/to/model.gguf"
-          - model_name="model.gguf"  # auto looks in ./models/
-        """
-
-        # Determine the actual path
         model_path = model_path or model_name
         if not model_path:
-            raise ValueError("You must provide either model_path or model_name.")
+            raise ValueError("Provide model_path or model_name.")
 
-        # If it’s not an absolute path, assume it's in ./models/
         if not os.path.isabs(model_path):
             model_path = os.path.join(os.getcwd(), "models", model_path)
 
         if not os.path.exists(model_path):
-            raise FileNotFoundError(f"Model file not found at '{model_path}'")
+            raise FileNotFoundError(f"Model not found at '{model_path}'")
 
         self.summarizer = summarizer
         self.use_cuda = use_cuda and torch.cuda.is_available()
@@ -40,7 +38,7 @@ class ChatBot:
         try:
             self.llm = AutoModelForCausalLM.from_pretrained(model_path, model_type=self.model_type)
         except RuntimeError:
-            logger.warning("GPU unavailable or failed, falling back to CPU...")
+            logger.warning("GPU unavailable, falling back to CPU...")
             os.environ["CT_USE_CUDA"] = "0"
             self.llm = AutoModelForCausalLM.from_pretrained(model_path, model_type=self.model_type)
             self.use_cuda = False
@@ -50,71 +48,96 @@ class ChatBot:
         self.chunk_size = 200
         self.chunk_overlap = 50
 
-    def _chunk_text(self, text: str, max_chars=None, overlap=None):
-        max_chars = max_chars or self.chunk_size
-        overlap = overlap or self.chunk_overlap
+    # ----------------- Context Handling -----------------
+    def _chunk_text(self, text: str) -> List[str]:
         chunks = []
         start = 0
         while start < len(text):
-            end = min(start + max_chars, len(text))
+            end = min(start + self.chunk_size, len(text))
             chunks.append(text[start:end])
-            start += max_chars - overlap
-        logger.debug(f"Text chunked into {len(chunks)} pieces")
+            start += self.chunk_size - self.chunk_overlap
         return chunks
 
-    def greet(self) -> str:
-        prompt = (
-            "You are HAS, a friendly AI assistant helping with PDFs.\n"
-            "Tone: casual, playful, slightly sarcastic.\n"
-            "Give a short greeting as if talking to a friend.\n"
-            "Response:"
-        )
-        try:
-            greeting = self.llm(prompt, max_new_tokens=100, stop=["\n"])
-            if isinstance(greeting, list):
-                greeting = " ".join(str(g) for g in greeting).strip()
-            else:
-                greeting = str(greeting).strip()
-            return greeting
-        except Exception as e:
-            logger.error(f"Failed to generate greeting: {e}")
-            return "Hey! I'm HAS 😎 Ready to mess with some PDFs?"
+    def _deduplicate_sentences(self, text: str) -> str:
+        seen = set()
+        result = []
+        for sentence in text.split(". "):
+            sentence = sentence.strip()
+            if sentence and sentence not in seen:
+                seen.add(sentence)
+                result.append(sentence)
+        return ". ".join(result)
 
+    # ----------------- Core Logic -----------------
     def ask(self, query: str, context: str = "", max_new_tokens: int = 256) -> str:
-        if len(context) > self.max_context_len:
-            context = context[-self.max_context_len:]
+        """
+        Ask a question using only the provided PDF context.
+        - If context is empty and query is general, allow model's generic knowledge.
+        """
+        # If context is empty but query is very vague, allow generic knowledge
+        is_general_query = not context or len(context.strip()) < 50
 
-        context_chunks = self._chunk_text(context)
+        # If context exists, strictly prioritize it
+        if context:
+            if len(context) > self.max_context_len:
+                context = context[-self.max_context_len:]
+            chunks = self._chunk_text(context)
+        else:
+            chunks = [""]  # single empty chunk for generic fallback
+
         answers = []
 
-        for i, chunk in enumerate(context_chunks):
+        for i, chunk in enumerate(chunks):
+            # Prompt construction
             prompt = (
-                f"You are HAS, an AI assistant that answers questions based on the given context.\n"
-                f"Tone: helpful, slightly sarcastic, playful.\n"
-                f"Do not make up info; if unknown, admit it.\n"
+                "You are a professional AI assistant (HAS) answering questions "
+                "based ONLY on the provided context. Do not fabricate information. "
+                "If the answer is unknown, say you cannot answer.\n"
                 f"Context: {chunk}\n"
                 f"Question: {query}\n"
-                f"Answer concisely, clearly, with witty sarcasm:"
+                "Answer:"
             )
+
+            # If general query and context is empty, allow general knowledge
+            if is_general_query and not chunk.strip():
+                prompt = (
+                    "You are a professional AI assistant (HAS). Answer the question "
+                    "using your general knowledge, in a concise and factual manner.\n"
+                    f"Question: {query}\n"
+                    "Answer:"
+                )
+
             try:
-                chunk_answer = self.llm(prompt, max_new_tokens=max_new_tokens,
-                                        stop=["\nQuestion:", "\nContext:"])
+                chunk_answer = self.llm(
+                    prompt,
+                    max_new_tokens=max_new_tokens,
+                    stop=["\nQuestion:", "\nContext:"]
+                )
+                # Handle list or string outputs
                 if isinstance(chunk_answer, list):
                     chunk_answer = " ".join(str(c) for c in chunk_answer).strip()
                 else:
                     chunk_answer = str(chunk_answer).strip()
                 answers.append(chunk_answer)
-                logger.debug(f"Chunk {i+1}/{len(context_chunks)} processed")
             except Exception as e:
                 logger.error(f"LLM call failed on chunk {i+1}: {e}")
                 answers.append("⚠️ Error generating chunk response.")
 
-        final_answer = " ".join(answers).strip()
+        merged = " ".join(answers)
+        merged = self._deduplicate_sentences(merged)
 
-        if self.summarizer and len(final_answer) > 1000:
+        # Summarize if very long
+        if self.summarizer and len(merged) > 1000:
             try:
-                final_answer = self.summarizer(final_answer)
+                merged = self.summarizer(merged)
             except Exception as e:
                 logger.warning(f"Summarizer failed: {e}")
 
-        return final_answer
+        # Trim final answer to avoid overly long responses
+        if len(merged) > 800:
+            merged = merged[:800] + "…"
+
+        return merged.strip()
+
+    def greet(self) -> str:
+        return "Hello! I'm HAS, your PDF assistant. How can I help today?"

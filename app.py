@@ -1,9 +1,11 @@
-# app.py (Flask + Mistral 7B + PDF RAG + Translator, simplified)
+# app.py (Flask + HAS + PDF RAG + Translator)
 import os
 import logging
+import pathlib
+import re
+import random
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-import pathlib, re
 
 from backend.chatbot import ChatBot
 from backend.pdf_handler import PDFHandler
@@ -18,7 +20,6 @@ UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB
 
-# ----------------- Filename Helpers -----------------
 def allowed_file(filename: str):
     return pathlib.Path(filename).suffix.lower() == ".pdf"
 
@@ -27,7 +28,7 @@ def sanitize_filename(filename: str):
 
 # ----------------- GPU / Environment -----------------
 os.environ["CT_THREADS"] = str(os.cpu_count())
-os.environ["CT_USE_CUDA"] = "1"
+os.environ["CT_USE_CUDA"] = "1"  # fallback handled in ChatBot
 
 # ----------------- Initialize Models -----------------
 translator = Translator()
@@ -52,9 +53,7 @@ def server_error(e):
 # ----------------- Routes -----------------
 @app.route("/")
 def index():
-    if os.path.exists("index.html"):
-        return send_from_directory(".", "index.html")
-    return jsonify({"success": False, "error": "index.html not found"}), 404
+    return send_from_directory(".", "index.html") if os.path.exists("index.html") else jsonify({"success": False, "error": "index.html not found"}), 404
 
 @app.route("/upload", methods=["POST"])
 def upload_files():
@@ -109,85 +108,65 @@ def chat():
 
         # ----------------- Detect user language -----------------
         user_lang = translator.detect_language(question)
-        if not user_lang or user_lang not in ["en", "ar"]:
+        if user_lang not in ["en", "ar"]:
             user_lang = "ar" if re.search(r'[\u0600-\u06FF]', question) else "en"
 
-        # ----------------- Supercharged greetings with sarcasm -----------------
+        # ----------------- Handle greetings / short small-talk -----------------
         greetings_ar = ["مرحبا", "أهلا", "سلام", "هاي", "هلا", "أهلاً وسهلاً"]
         greetings_en = ["hi", "hello", "hey", "hiya", "yo", "sup"]
         greetings_all = [g.lower() for g in greetings_ar + greetings_en]
-
         q_norm = question.lower().strip()
+
         if q_norm in greetings_all or len(q_norm.split()) <= 2:
             responses_ar = [
-                "أهلا! على الأقل لم تضع لي سؤالًا عن الرياضيات 😏",
-                "مرحبا! ماذا تريد هذه المرة؟ 😎",
-                "أهلا وسهلا! 🌟 لا تقل لي أنك ستسأل عن الطقس!"
+                "أهلا! كيف يمكنني مساعدتك اليوم؟",
+                "مرحبا! ماذا تريد أن تفعل؟",
+                "أهلا وسهلا! ما سؤالك اليوم؟"
             ]
             responses_en = [
-                "Hello! Finally, someone greeted me 😏",
-                "Hey there! What trouble are we getting into today? 😎",
-                "Hi! Don't tell me you're asking about the weather again!"
+                "Hello! How can I help you today?",
+                "Hi there! What would you like to do?",
+                "Hey! What's your question?"
             ]
-            import random
             answer = random.choice(responses_ar if user_lang == "ar" else responses_en)
             return jsonify({"success": True, "response": answer, "sources": []})
 
-        # ----------------- General small-talk with sarcasm -----------------
-        small_talk_patterns = [
-            r"how are you", r"what's up", r"tell me a joke", r"كيف حالك", r"ماذا تفعل", r"أخبرني بنكتة"
-        ]
-        for pattern in small_talk_patterns:
-            if re.search(pattern, question, re.IGNORECASE):
-                responses_ar = [
-                    "أنا بخير، على عكس الإنترنت 😏",
-                    "كل شيء ممتاز! وأنت؟ لا تكن كسولاً 😎",
-                    "أعمل على مساعدة البشر، مثلك 😉"
-                ]
-                responses_en = [
-                    "I'm good, unlike the WiFi 😏",
-                    "All is great! How about you? Don't be lazy 😎",
-                    "Just helping humans like you 😉"
-                ]
-                import random
-                answer = random.choice(responses_ar if user_lang == "ar" else responses_en)
-                return jsonify({"success": True, "response": answer, "sources": []})
-
         # ----------------- Translate question to English if needed -----------------
-        translated_question = translator.translate_to_english(question) if user_lang != "en" else question
+        translated_question = (
+            translator.translate_to_english(question) if user_lang != "en" else question
+        )
 
         # ----------------- Gather PDF files -----------------
         pdf_files = [f for f in os.listdir(app.config["UPLOAD_FOLDER"]) if allowed_file(f)]
 
         # ----------------- Get context from PDFs -----------------
         context_data = pdf_handler.get_context(
-            translated_question, top_k=5, pdf_files=pdf_files, max_chars=1500
+            translated_question,
+            top_k=5,
+            pdf_files=pdf_files,
+            max_chars=1500
         )
-        context_text = context_data.get("text", "") or "No relevant context found in uploaded PDFs."
+        context_text = context_data.get("text", "") or ""
         sources = context_data.get("sources", [])
 
-        # ----------------- Translate PDF chunks to English if needed -----------------
-        pdf_lang = translator.detect_language(context_text)
-        if pdf_lang != "en":
+        # ----------------- Translate context to English if needed -----------------
+        context_lang = translator.detect_language(context_text)
+        if context_lang != "en" and context_text.strip():
             context_text = translator.translate_to_english(context_text)
 
-        # ----------------- Ask the LLM -----------------
-        answer = chatbot.ask(translated_question, context_text)
+        # ----------------- Ask the LLM using ONLY PDF context -----------------
+        # If context is empty or too short, allow general knowledge
+        answer = chatbot.ask(translated_question, context=context_text)
 
-        # ----------------- Translate back if user is not English -----------------
-        if user_lang != "en":
-            try:
-                answer = translator.translate(answer, to_lang=user_lang)
-            except Exception as e:
-                logger.warning(f"Translation back failed, returning English: {e}")
+        # ----------------- Translate back to Arabic if user asked in Arabic -----------------
+        if user_lang == "ar":
+            answer = translator.translate_to_arabic(answer)
 
         return jsonify({"success": True, "response": answer, "sources": sources})
 
     except Exception as e:
         logger.error(f"Unexpected error in /chat: {e}", exc_info=True)
         return jsonify({"success": False, "response": "Error processing your request."})
-
-
 
 @app.route("/reset", methods=["POST"])
 def reset():
@@ -201,5 +180,4 @@ def reset():
 
 # ----------------- Run Server -----------------
 if __name__ == "__main__":
-    # Replace 5000 with your ngrok port
     app.run(host="0.0.0.0", port=80, debug=False)
