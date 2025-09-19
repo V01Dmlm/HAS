@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HAS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f172a;
+  --panel: #111827;
+  --accent: #4f46e5;
+  --accent-2: #22c55e;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+  --border: #1f2937;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 0;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: radial-gradient(1200px 600px at 10% 10%, #1f2937 0%, #0f172a 60%);
+  color: var(--text);
+}
+.container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+.header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.logo { width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, var(--accent), #7c3aed); display: grid; place-items: center; font-weight: 800; color:white; }
+.title { font-size: 20px; font-weight: 700; letter-spacing: 0.3px; }
+.actions { display: flex; align-items: center; gap: 8px; }
+.btn {
+  background: var(--accent); color: white; border: none; border-radius: 10px; padding: 10px 14px; cursor: pointer; font-weight: 600;
+  transition: transform 0.1s ease, box-shadow 0.2s ease; box-shadow: 0 10px 20px rgba(79,70,229,0.25);
+}
+.btn:hover { transform: translateY(-1px); }
+.btn.secondary { background: #374151; box-shadow: none; }
+.layout { display: grid; grid-template-columns: 360px 1fr; gap: 16px; height: calc(100vh - 80px); }
+.panel { background: rgba(17, 24, 39, 0.75); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; backdrop-filter: blur(8px); display: flex; flex-direction: column; }
+.panel-header { padding: 16px 16px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.panel-title { font-weight: 700; letter-spacing: 0.2px; }
+.panel-body { padding: 16px; flex: 1; overflow-y: auto; }
+.dropzone { border: 2px dashed #334155; border-radius: 12px; padding: 24px; text-align: center; color: var(--muted); background: #0b1220; cursor: pointer; }
+.dropzone.drag { border-color: var(--accent); background: #0e1530; }
+.file-list { display: grid; gap: 10px; margin-top: 14px; }
+.file-item { display: flex; align-items: center; justify-content: space-between; background: #0b1220; border: 1px solid var(--border); padding: 10px 12px; border-radius: 10px; }
+.file-name { font-size: 14px; color: var(--text); }
+.file-meta { font-size: 12px; color: var(--muted); }
+.chat { display: flex; flex-direction: column; }
+.messages { flex: 1; padding: 16px; overflow-y: auto; display: grid; gap: 12px; scroll-behavior: smooth; position: relative; }
+.msg .role { font-size: 12px; color: var(--muted); }
+.bubble { background: #0b1220; border: 1px solid var(--border); padding: 12px 14px; border-radius: 12px; line-height: 1.6; white-space: pre-wrap; }
+.input-bar { display: flex; gap: 10px; padding: 12px; border-top: 1px solid var(--border); background: #0b1220; }
+.input { flex: 1; background: #0b1220; border: 1px solid var(--border); border-radius: 12px; color: var(--text); padding: 14px; outline: none; }
+.sources { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; }
+.source { background: #0b1220; border: 1px solid var(--border); padding: 6px 10px; border-radius: 999px; font-size: 12px; color: var(--muted); }
+.hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.badge { background: #0b1220; border: 1px solid var(--border); color: var(--muted); font-size: 12px; padding: 4px 8px; border-radius: 999px; }
+#typingIndicator { position: sticky; bottom: 0; z-index: 10; background: transparent; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="brand">
+      <div class="logo">H</div>
+      <div class="title">Made by Eng.samaa & abderlrhman & hamdy</div>
+    </div>
+    <div class="actions">
+      <button class="btn secondary" id="resetBtn">Reset</button>
+      <a class="btn" href="#" id="openUploader">Upload</a>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Documents</div>
+        <span class="badge" id="fileCounter">0 files</span>
+        <span class="badge" id="indexStatus">Not indexed</span>
+      </div>
+      <div class="panel-body">
+        <div id="dropzone" class="dropzone">
+          <p>Drag & drop files here, or click to browse</p>
+          <p class="hint">Supported: PDF</p>
+          <input id="fileInput" type="file" multiple style="display:none" accept=".pdf" />
+        </div>
+        <div class="file-list" id="fileList"></div>
+      </div>
+    </div>
+
+    <div class="panel chat">
+      <div class="messages" id="messages"></div>
+      <div class="input-bar">
+        <input id="question" class="input" placeholder="How can I help you today?" />
+        <button id="sendBtn" class="btn">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const fileList = document.getElementById('fileList');
+const fileCounter = document.getElementById('fileCounter');
+const indexStatus = document.getElementById('indexStatus');
+const messages = document.getElementById('messages');
+const question = document.getElementById('question');
+const sendBtn = document.getElementById('sendBtn');
+const openUploader = document.getElementById('openUploader');
+const resetBtn = document.getElementById('resetBtn');
+
+// --- Typing Indicator ---
+const typingIndicator = document.createElement('div');
+typingIndicator.className = 'msg';
+typingIndicator.id = 'typingIndicator';
+typingIndicator.innerHTML = `<div class="role">Assistant</div><div class="bubble">Typing...</div>`;
+typingIndicator.style.display = 'none';
+messages.appendChild(typingIndicator);
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropzone.classList.remove('drag');
+  if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files);
+});
+openUploader.addEventListener('click', (e) => { e.preventDefault(); fileInput.click(); });
+fileInput.addEventListener('change', () => uploadFiles(fileInput.files));
+
+resetBtn.addEventListener('click', async () => {
+  await fetch('/reset', { method: 'POST' });
+  renderFiles([]);
+  indexStatus.textContent = 'Not indexed';
+  addAssistant('Session has been reset. Please upload files again.');
+});
+
+function renderFiles(files) {
+  fileList.innerHTML = '';
+  files.forEach(f => {
+    const row = document.createElement('div');
+    row.className = 'file-item';
+    row.innerHTML = `<div class="file-name">${f.filename}</div><div class="file-meta">${(f.size/1024).toFixed(1)} KB • ${f.type.toUpperCase()}</div>`;
+    fileList.appendChild(row);
+  });
+  fileCounter.textContent = `${files.length} file${files.length === 1 ? '' : 's'}`;
+}
+
+async function refreshFiles() {
+  const res = await fetch('/files');
+  const data = await res.json();
+  renderFiles(data.files || []);
+}
+
+async function uploadFiles(files) {
+  if (!files.length) return;
+  const formData = new FormData();
+  for (const f of files) formData.append('files', f);
+
+  addAssistant('Uploading and indexing files...');
+  indexStatus.textContent = 'Indexing...';
+
+  try {
+    const res = await fetch('/upload', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (data.success) {
+      addAssistant(`Uploaded: ${data.uploaded.join(', ')}` + (data.errors.length ? `\nErrors: ${data.errors.join(' | ')}` : ''));
+      indexStatus.textContent = 'Indexed';
+      refreshFiles();
+    } else {
+      addAssistant('Upload failed: ' + (data.errors.join(' | ') || 'Unknown error'));
+      indexStatus.textContent = 'Not indexed';
+    }
+  } catch (err) {
+    addAssistant('Upload failed: ' + err.message);
+    indexStatus.textContent = 'Not indexed';
+  }
+}
+
+function isArabic(text) { return /[\u0600-\u06FF]/.test(text); }
+
+function addUser(text) {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg';
+  const dir = isArabic(text) ? 'rtl' : 'ltr';
+  wrap.innerHTML = `<div class="role">You</div><div class="bubble" style="direction:${dir}; text-align:${dir==='rtl'?'right':'left'};">${escapeHtml(text)}</div>`;
+  messages.insertBefore(wrap, typingIndicator);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function addAssistant(text, sources=[]) {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg';
+  wrap.innerHTML = `<div class="role">Assistant</div><div class="bubble"><span dir="auto">${escapeHtml(text)}</span></div>`;
+  
+  if (sources.length) {
+    const srcWrap = document.createElement('div');
+    srcWrap.className = 'sources';
+    sources.forEach(s => {
+      const tag = document.createElement('div');
+      tag.className = 'source';
+      tag.textContent = s;
+      srcWrap.appendChild(tag);
+    });
+    wrap.appendChild(srcWrap);
+  }
+
+  messages.insertBefore(wrap, typingIndicator);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function escapeHtml(str) {
+  return str.replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\'':'&#39;','"':'&quot;'}[c]));
+}
+
+async function ask() {
+  const q = question.value.trim();
+  if (!q) return;
+  addUser(q);
+  question.value = '';
+
+  typingIndicator.style.display = 'block';
+  messages.scrollTop = messages.scrollHeight;
+
+  try {
+    const res = await fetch('/chat', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ question: q })
+    });
+    const data = await res.json();
+    typingIndicator.style.display = 'none';
+    if (data.success) addAssistant(data.response, data.sources || []);
+    else addAssistant(data.response || 'Error');
+  } catch (err) {
+    typingIndicator.style.display = 'none';
+    addAssistant('Error sending question: ' + err.message);
+  }
+}
+
+sendBtn.addEventListener('click', ask);
+question.addEventListener('keydown', (e) => { if(e.key==='Enter') ask(); });
+question.addEventListener('input', () => {
+  question.style.direction = isArabic(question.value) ? 'rtl' : 'ltr';
+  question.style.textAlign = isArabic(question.value) ? 'right' : 'left';
+});
+
+refreshFiles();
+</script>
+</body>
+</html>
