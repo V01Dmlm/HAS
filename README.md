@@ -44,7 +44,7 @@ pip install -r requirements.txt
 # Run the app
 python app.py
 Open your browser at http://localhost:5000
-
+```
 🎯 Usage
 Upload PDFs via drag & drop.
 
