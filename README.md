@@ -41,6 +41,7 @@ python -m venv .venv
 pip install -r requirements.txt
 
 # Download the model and place in `models/`
+https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf?download=true
 # Run the app
 python app.py
 Open your browser at http://localhost:5000
