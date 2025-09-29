@@ -89,3 +89,4 @@ class Translator:
             if not self.silent:
                 logger.warning(f"⚠️ Language detection failed: {e}")
             return "en"
+ 
