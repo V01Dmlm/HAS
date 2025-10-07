@@ -3,7 +3,7 @@
 # ------------------------
 Flask>=2.3.0
 flask-cors>=3.0.13
-regex>=2025.10.7
+regex
 requests>=2.31.0
 tqdm>=4.66.0
 typing-extensions>=4.8.0
@@ -12,7 +12,7 @@ typing-extensions>=4.8.0
 # ML & Embedding
 # ------------------------
 torch
-ctransformers
+ctransformers 
 sentence-transformers
 faiss-cpu
 
