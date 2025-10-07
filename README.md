@@ -26,26 +26,25 @@
 ---
 
 ## 💻 Quick Start
-
-```bash
 1. Clone the Repository
+```bash
 git clone https://github.com/V01Dmlm/HAS.git
 cd HAS
-
-2. Run the Setup Script
+ ```
+3. Run the Setup Script
 
 We provide a script that creates a virtual environment, installs dependencies, and downloads the Mistral model automatically.
 
 Windows:
-
+```bash
 setup.bat
-
+ ```
 
 Linux / Mac:
-
+```bash
 chmod +x setup.sh
 ./setup.sh
-
+ ```
 
 The script will:
 
@@ -58,13 +57,14 @@ Install all dependencies from requirements.txt
 Download the Mistral 7B Instruct model into models/
 
 3. Run the App
+```bash
 python app.py
-
+ ```
 
 Open your browser at:
-
+```bash
 http://localhost:5000
-```
+ ```
 🎯 Usage
 Upload PDFs via drag & drop.
 
