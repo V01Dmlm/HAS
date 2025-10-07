@@ -11,10 +11,10 @@ typing-extensions>=4.8.0
 # ------------------------
 # ML & Embedding
 # ------------------------
-torch>=2.2.0
-ctransformers @ git+https://github.com/abetlen/ctransformers.git@main
-sentence-transformers>=2.2.2
-faiss-cpu>=1.7.4
+torch
+ctransformers
+sentence-transformers
+faiss-cpu
 
 # ------------------------
 # PDF / RAG
