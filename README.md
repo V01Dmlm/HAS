@@ -26,25 +26,45 @@
 ---
 
 ## 💻 Quick Start
-
+1. Clone the Repository
 ```bash
-# Clone the repo
 git clone https://github.com/V01Dmlm/HAS.git
 cd HAS
+ ```
+2. Run the Setup Script
 
-# Setup virtual environment
-python -m venv .venv
-.venv\Scripts\activate   # Windows
-# source .venv/bin/activate  # Linux / Mac
+We provide a script that creates a virtual environment, installs dependencies, and downloads the Mistral model automatically.
 
-# Install dependencies
-pip install -r requirements.txt
+Windows:
+```bash
+setup.bat
+ ```
 
-# Download the model and place in `models/`
-# Run the app
+Linux / Mac:
+```bash
+chmod +x setup.sh
+./setup.sh
+ ```
+
+The script will:
+
+Create a .venv virtual environment
+
+Activate it
+
+Install all dependencies from requirements.txt
+
+Download the Mistral 7B Instruct model into models/
+
+3. Run the App
+```bash
 python app.py
-Open your browser at http://localhost:5000
-```
+ ```
+
+Open your browser at:
+```bash
+http://localhost:5000
+ ```
 🎯 Usage
 Upload PDFs via drag & drop.
 
@@ -57,4 +77,4 @@ Eng. Samaa
 
 Abdelrhman Wael
 
-Hamdy
+Hamdy faheem
