@@ -31,7 +31,7 @@
 git clone https://github.com/V01Dmlm/HAS.git
 cd HAS
  ```
-3. Run the Setup Script
+2. Run the Setup Script
 
 We provide a script that creates a virtual environment, installs dependencies, and downloads the Mistral model automatically.
 
@@ -77,4 +77,4 @@ Eng. Samaa
 
 Abdelrhman Wael
 
-Hamdy
+Hamdy faheem
