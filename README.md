@@ -28,23 +28,42 @@
 ## 💻 Quick Start
 
 ```bash
-# Clone the repo
+1. Clone the Repository
 git clone https://github.com/V01Dmlm/HAS.git
 cd HAS
 
-# Setup virtual environment
-python -m venv .venv
-.venv\Scripts\activate   # Windows
-# source .venv/bin/activate  # Linux / Mac
+2. Run the Setup Script
 
-# Install dependencies
-pip install -r requirements.txt
+We provide a script that creates a virtual environment, installs dependencies, and downloads the Mistral model automatically.
 
-# Download the model and place in `models/`
-https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf?download=true
-# Run the app
+Windows:
+
+setup.bat
+
+
+Linux / Mac:
+
+chmod +x setup.sh
+./setup.sh
+
+
+The script will:
+
+Create a .venv virtual environment
+
+Activate it
+
+Install all dependencies from requirements.txt
+
+Download the Mistral 7B Instruct model into models/
+
+3. Run the App
 python app.py
-Open your browser at http://localhost:5000
+
+
+Open your browser at:
+
+http://localhost:5000
 ```
 🎯 Usage
 Upload PDFs via drag & drop.
