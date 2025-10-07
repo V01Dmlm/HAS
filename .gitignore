@@ -34,3 +34,4 @@ Thumbs.db
 *~
 /models
 /vector_store
+venv

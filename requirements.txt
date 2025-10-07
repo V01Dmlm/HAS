@@ -1,0 +1,37 @@
+# ------------------------
+# Core Python Packages
+# ------------------------
+Flask>=2.3.0
+flask-cors>=3.0.13
+regex>=2025.10.7
+requests>=2.31.0
+tqdm>=4.66.0
+typing-extensions>=4.8.0
+
+# ------------------------
+# ML & Embedding
+# ------------------------
+torch>=2.2.0
+ctransformers @ git+https://github.com/abetlen/ctransformers.git@main
+sentence-transformers>=2.2.2
+faiss-cpu>=1.7.4
+
+# ------------------------
+# PDF / RAG
+# ------------------------
+PyMuPDF>=1.22.0
+numpy>=1.25.0
+
+# ------------------------
+# Translation / NLP
+# ------------------------
+deep-translator>=1.9.6
+langdetect>=1.0.9
+arabic-reshaper>=2.1.0
+python-bidi>=0.4.2
+
+# ------------------------
+# Utilities
+# ------------------------
+pillow>=10.0.0
+concurrent-log-handler>=0.9.9
